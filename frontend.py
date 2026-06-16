@@ -4,154 +4,79 @@ from graphs.blog_graph import build_graph
 st.set_page_config(
     page_title="Quill — AI Content Engine",
     page_icon="◆",
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# ── Global styles ──────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+#MainMenu, footer, header   { visibility: hidden; }
 
-[data-testid="stAppViewContainer"] { background: #FAFAFA; }
-[data-testid="stHeader"]           { background: transparent; }
-[data-testid="stSidebar"]          { display: none; }
-.block-container                   { max-width: 780px; padding: 2.5rem 2rem 6rem; }
-#MainMenu, footer, header          { visibility: hidden; }
+/* ── Page background ── */
+[data-testid="stAppViewContainer"] { background: #F0EFF8; }
+[data-testid="stHeader"]            { display: none; }
+[data-testid="stSidebar"]           { display: none; }
+.block-container                    { padding: 1.5rem 1.75rem !important; max-width: 100% !important; }
+
+/* ── Two-panel cards ── */
+div[data-testid="column"]:first-child {
+    background: white;
+    border-radius: 18px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    padding: 1.75rem 1.5rem !important;
+    position: sticky;
+    top: 1.5rem;
+    align-self: flex-start;
+    max-height: calc(100vh - 3rem);
+    overflow-y: auto;
+}
+div[data-testid="column"]:last-child {
+    background: white;
+    border-radius: 18px;
+    border: 1px solid #E5E7EB;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    padding: 1.75rem 2rem !important;
+    min-height: calc(100vh - 3rem);
+}
+
+/* ── Scrollbar ── */
+div[data-testid="column"]:first-child::-webkit-scrollbar { width: 4px; }
+div[data-testid="column"]:first-child::-webkit-scrollbar-track { background: transparent; }
+div[data-testid="column"]:first-child::-webkit-scrollbar-thumb { background: #E5E7EB; border-radius: 4px; }
 
 /* ── Brand ── */
-.quill-nav {
+.brand {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 3rem;
+    margin-bottom: 1.5rem;
 }
-.quill-logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.quill-mark {
-    width: 32px; height: 32px;
-    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+.brand-left { display: flex; align-items: center; gap: 9px; }
+.brand-mark {
+    width: 30px; height: 30px;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
     border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 800; color: white;
-    letter-spacing: -1px;
+    font-size: 13px; font-weight: 800; color: white;
     flex-shrink: 0;
 }
-.quill-wordmark {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #111827;
-    letter-spacing: -0.02em;
-}
-.quill-version {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: #7C3AED;
-    background: #F5F3FF;
-    padding: 2px 8px;
-    border-radius: 100px;
+.brand-name  { font-size: 1rem; font-weight: 700; color: #111827; letter-spacing: -0.02em; }
+.brand-badge {
+    font-size: 0.65rem; font-weight: 600;
+    color: #7C3AED; background: #F5F3FF;
     border: 1px solid #DDD6FE;
+    padding: 2px 7px; border-radius: 100px;
 }
 
-/* ── Hero ── */
-.hero {
-    margin-bottom: 2.5rem;
-}
-.hero-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: #7C3AED;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 1rem;
-}
-.hero-eyebrow-dot {
-    width: 6px; height: 6px;
-    background: #7C3AED;
-    border-radius: 50%;
-    display: inline-block;
-}
-.hero-title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: #111827;
-    letter-spacing: -0.04em;
-    line-height: 1.15;
-    margin-bottom: 1rem;
-}
-.hero-title span {
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-.hero-sub {
-    font-size: 1rem;
-    color: #6B7280;
-    line-height: 1.65;
-    max-width: 560px;
-}
-
-/* ── Pipeline bar ── */
-.pipeline-bar {
-    display: flex;
-    align-items: center;
-    gap: 0;
-    background: white;
-    border: 1px solid #E5E7EB;
-    border-radius: 12px;
-    padding: 10px 16px;
-    margin: 1.75rem 0;
-    width: fit-content;
-}
-.pipe-step {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #374151;
-    padding: 0 10px;
-}
-.pipe-step:first-child { padding-left: 0; }
-.pipe-icon {
-    width: 22px; height: 22px;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px;
-}
-.pipe-icon-orch  { background: #EEF2FF; color: #4F46E5; }
-.pipe-icon-work  { background: #F0FDF4; color: #16A34A; }
-.pipe-icon-red   { background: #FFF7ED; color: #EA580C; }
-.pipe-arrow {
-    color: #D1D5DB;
-    font-size: 0.7rem;
-    padding: 0 2px;
-}
-
-/* ── Input card ── */
-.input-card {
-    background: white;
-    border: 1.5px solid #E5E7EB;
-    border-radius: 16px;
-    padding: 1.5rem;
-    margin-bottom: 0.75rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03);
-}
-.input-label {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #374151;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.6rem;
+/* ── Section label ── */
+.field-label {
+    font-size: 0.72rem; font-weight: 600;
+    color: #374151; text-transform: uppercase;
+    letter-spacing: 0.07em; margin-bottom: 0.5rem;
 }
 
 /* ── Textarea ── */
@@ -159,7 +84,7 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 .stTextArea textarea {
     border-radius: 10px !important;
     border: 1.5px solid #E5E7EB !important;
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
     font-family: 'Inter', sans-serif !important;
     color: #111827 !important;
     background: #FAFAFA !important;
@@ -179,18 +104,18 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
     border-radius: 10px !important;
     font-family: 'Inter', sans-serif !important;
     font-weight: 600 !important;
-    font-size: 0.88rem !important;
-    transition: all 0.15s ease !important;
+    font-size: 0.85rem !important;
     border: none !important;
+    transition: all 0.15s ease !important;
 }
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%) !important;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED) !important;
     color: white !important;
-    padding: 0.6rem 1.5rem !important;
-    box-shadow: 0 2px 8px rgba(79,70,229,0.25) !important;
+    box-shadow: 0 2px 8px rgba(79,70,229,0.3) !important;
+    padding: 0.55rem 1.25rem !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 6px 20px rgba(79,70,229,0.4) !important;
+    box-shadow: 0 5px 18px rgba(79,70,229,0.45) !important;
     transform: translateY(-1px) !important;
 }
 .stButton > button[kind="primary"]:disabled {
@@ -202,204 +127,184 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
 /* ── Progress ── */
 .stProgress > div > div {
-    background: #F3F4F6 !important;
-    border-radius: 100px !important;
-    height: 6px !important;
+    background: #F3F4F6 !important; border-radius: 100px !important; height: 5px !important;
 }
 .stProgress > div > div > div > div {
-    background: linear-gradient(90deg, #4F46E5, #7C3AED) !important;
-    border-radius: 100px !important;
+    background: linear-gradient(90deg, #4F46E5, #7C3AED) !important; border-radius: 100px !important;
 }
 
 /* ── Status widget ── */
-[data-testid="stStatusWidget"] {
-    border-radius: 14px !important;
-    border: 1.5px solid #E5E7EB !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04) !important;
-}
+[data-testid="stStatusWidget"] { border-radius: 12px !important; border: 1px solid #E5E7EB !important; }
+
+/* ── Divider ── */
+hr { border: none !important; border-top: 1px solid #F3F4F6 !important; margin: 1.25rem 0 !important; }
 
 /* ── Metrics ── */
 [data-testid="metric-container"] {
-    background: white;
-    border: 1px solid #E5E7EB;
-    border-radius: 14px;
-    padding: 1.1rem 1.25rem 0.9rem !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    background: #FAFAFA; border: 1px solid #F3F4F6;
+    border-radius: 12px; padding: 0.85rem 1rem 0.7rem !important;
 }
-[data-testid="stMetricLabel"]  { color: #6B7280 !important; font-size: 0.78rem !important; font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
-[data-testid="stMetricValue"]  { color: #111827 !important; font-size: 1.6rem !important; font-weight: 700 !important; letter-spacing: -0.02em !important; }
-[data-testid="stMetricDelta"]  { display: none; }
+[data-testid="stMetricLabel"] { color: #9CA3AF !important; font-size: 0.7rem !important; font-weight: 600 !important; text-transform: uppercase !important; letter-spacing: 0.05em !important; }
+[data-testid="stMetricValue"] { color: #111827 !important; font-size: 1.4rem !important; font-weight: 700 !important; letter-spacing: -0.02em !important; }
 
 /* ── Tabs ── */
 .stTabs [data-baseweb="tab-list"] {
-    background: #F3F4F6 !important;
-    border-radius: 10px !important;
-    padding: 4px !important;
-    gap: 2px !important;
-    border-bottom: none !important;
+    background: #F3F4F6 !important; border-radius: 10px !important;
+    padding: 3px !important; gap: 2px !important; border-bottom: none !important;
 }
 .stTabs [data-baseweb="tab"] {
-    border-radius: 8px !important;
-    font-weight: 500 !important;
-    color: #6B7280 !important;
-    border: none !important;
-    font-size: 0.85rem !important;
-    padding: 0.4rem 1rem !important;
+    border-radius: 7px !important; font-weight: 500 !important;
+    color: #6B7280 !important; border: none !important;
+    font-size: 0.82rem !important; padding: 0.35rem 0.9rem !important;
 }
 .stTabs [aria-selected="true"] {
-    background: white !important;
-    color: #111827 !important;
+    background: white !important; color: #111827 !important;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1) !important;
 }
 
 /* ── Download button ── */
 .stDownloadButton > button {
-    border-radius: 10px !important;
-    border: 1.5px solid #E5E7EB !important;
-    background: white !important;
-    color: #374151 !important;
-    font-weight: 600 !important;
-    font-size: 0.85rem !important;
+    border-radius: 9px !important; border: 1.5px solid #E5E7EB !important;
+    background: white !important; color: #374151 !important;
+    font-weight: 600 !important; font-size: 0.82rem !important;
     transition: all 0.15s !important;
 }
 .stDownloadButton > button:hover {
-    border-color: #7C3AED !important;
-    color: #7C3AED !important;
-    background: #FAFAFF !important;
+    border-color: #7C3AED !important; color: #7C3AED !important;
 }
-
-/* ── Section cards in outline ── */
-.section-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid #F9FAFB;
-}
-.section-row:last-child { border-bottom: none; }
-.section-num {
-    min-width: 26px; height: 26px;
-    background: #F3F4F6;
-    border-radius: 6px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #6B7280;
-    margin-top: 1px;
-}
-.section-title  { font-size: 0.88rem; font-weight: 600; color: #111827; }
-.section-brief  { font-size: 0.8rem; color: #6B7280; margin-top: 1px; line-height: 1.4; }
 
 /* ── Expander ── */
-.streamlit-expanderHeader {
-    font-weight: 600 !important;
-    color: #374151 !important;
-    font-size: 0.88rem !important;
-}
+.streamlit-expanderHeader { font-weight: 600 !important; color: #374151 !important; font-size: 0.83rem !important; }
 
-/* ── Result header ── */
-.result-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 2rem 0 1.25rem;
+/* ── Empty state ── */
+.empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: calc(100vh - 10rem);
+    text-align: center; color: #9CA3AF;
+}
+.empty-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, #EEF2FF, #F5F3FF);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 1rem;
+    border: 1px solid #E0E7FF;
+}
+.empty-title { font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem; }
+.empty-sub   { font-size: 0.82rem; color: #9CA3AF; line-height: 1.5; max-width: 240px; }
+
+/* ── Step list in left panel ── */
+.step-item {
+    display: flex; align-items: flex-start; gap: 9px;
+    padding: 5px 0; font-size: 0.82rem;
+}
+.step-dot-pending { width: 8px; height: 8px; border-radius: 50%; background: #E5E7EB; margin-top: 4px; flex-shrink: 0; }
+.step-dot-active  { width: 8px; height: 8px; border-radius: 50%; background: #7C3AED; margin-top: 4px; flex-shrink: 0; box-shadow: 0 0 0 3px rgba(124,58,237,0.2); }
+.step-dot-done    { width: 8px; height: 8px; border-radius: 50%; background: #10B981; margin-top: 4px; flex-shrink: 0; }
+.step-text-muted  { color: #9CA3AF; }
+.step-text-active { color: #7C3AED; font-weight: 600; }
+.step-text-done   { color: #374151; font-weight: 500; }
+
+/* ── Section outline row ── */
+.outline-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 0; border-bottom: 1px solid #F9FAFB;
+    font-size: 0.8rem;
+}
+.outline-row:last-child { border-bottom: none; }
+.outline-num {
+    min-width: 22px; height: 22px; background: #F3F4F6;
+    border-radius: 5px; display: flex; align-items: center;
+    justify-content: center; font-size: 0.68rem; font-weight: 700;
+    color: #6B7280; margin-top: 1px; flex-shrink: 0;
+}
+.outline-title { font-weight: 600; color: #111827; line-height: 1.3; }
+.outline-brief { color: #6B7280; font-size: 0.75rem; margin-top: 1px; line-height: 1.35; }
+
+/* ── Result badge ── */
+.result-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.25rem;
 }
 .result-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #F0FDF4;
-    color: #16A34A;
-    border: 1px solid #BBF7D0;
-    border-radius: 100px;
-    padding: 3px 10px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 5px;
+    background: #F0FDF4; color: #16A34A;
+    border: 1px solid #BBF7D0; border-radius: 100px;
+    padding: 3px 10px; font-size: 0.72rem; font-weight: 600;
 }
-.result-title {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #111827;
-}
-
-hr { border: none; border-top: 1px solid #F3F4F6 !important; margin: 1.5rem 0 !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Nav ────────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="quill-nav">
-    <div class="quill-logo">
-        <div class="quill-mark">Q</div>
-        <span class="quill-wordmark">Quill</span>
-    </div>
-    <span class="quill-version">Beta</span>
-</div>
-""", unsafe_allow_html=True)
+# ── Layout ─────────────────────────────────────────────────────────────────────
+left, right = st.columns([4, 7], gap="medium")
 
-# ── Hero ───────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="hero">
-    <div class="hero-eyebrow">
-        <span class="hero-eyebrow-dot"></span>
-        Multi-agent content engine
+# ══════════════════════════════════════════════════════════════════
+# LEFT PANEL — input + pipeline status
+# ══════════════════════════════════════════════════════════════════
+with left:
+    # Brand
+    st.markdown("""
+    <div class="brand">
+        <div class="brand-left">
+            <div class="brand-mark">Q</div>
+            <span class="brand-name">Quill</span>
+        </div>
+        <span class="brand-badge">Beta</span>
     </div>
-    <div class="hero-title">
-        From idea to article,<br><span>written by agents.</span>
-    </div>
-    <div class="hero-sub">
-        Quill plans your article, dispatches parallel AI writers for each section,
-        then assembles a polished draft — all in a single run.
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# ── Pipeline visualization ─────────────────────────────────────────────────────
-st.markdown("""
-<div class="pipeline-bar">
-    <div class="pipe-step">
-        <div class="pipe-icon pipe-icon-orch">◆</div>
-        Orchestrator
-    </div>
-    <span class="pipe-arrow">›</span>
-    <div class="pipe-step">
-        <div class="pipe-icon pipe-icon-work">⚡</div>
-        Workers <span style="color:#9CA3AF;font-weight:400">&nbsp;(parallel)</span>
-    </div>
-    <span class="pipe-arrow">›</span>
-    <div class="pipe-step">
-        <div class="pipe-icon pipe-icon-red">⬡</div>
-        Reducer
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    st.markdown("<hr>", unsafe_allow_html=True)
 
-# ── Input ──────────────────────────────────────────────────────────────────────
-st.markdown('<div class="input-label">Article topic</div>', unsafe_allow_html=True)
+    # Topic input
+    st.markdown('<div class="field-label">Article topic</div>', unsafe_allow_html=True)
+    topic = st.text_area(
+        "topic",
+        placeholder='e.g. "How Self-Attention Works in Transformers"',
+        height=110,
+        label_visibility="collapsed",
+    )
 
-topic = st.text_area(
-    "topic",
-    placeholder='e.g.  "How Self-Attention Works in Transformers"',
-    height=96,
-    label_visibility="collapsed",
-)
-
-col_btn, col_hint = st.columns([2, 4])
-with col_btn:
     generate = st.button(
         "Generate article  →",
         type="primary",
         disabled=not topic.strip(),
         use_container_width=True,
     )
-with col_hint:
+
     if topic.strip():
         wc = len(topic.split())
-        st.caption(f"**{wc}** {'word' if wc == 1 else 'words'} · ready to generate")
-    else:
-        st.caption("Describe your topic above to get started")
+        st.caption(f"{wc} {'word' if wc == 1 else 'words'}")
 
-# ── Pipeline execution ─────────────────────────────────────────────────────────
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Pipeline steps placeholder
+    pipeline_area = st.empty()
+
+    # Metrics placeholder (shown after generation)
+    metrics_area = st.empty()
+
+    # Show outline placeholder (shown after orchestrator)
+    outline_area = st.empty()
+
+# ══════════════════════════════════════════════════════════════════
+# RIGHT PANEL — output
+# ══════════════════════════════════════════════════════════════════
+with right:
+    output_area = st.empty()
+
+    # Default empty state
+    if "final_blog" not in st.session_state:
+        output_area.markdown("""
+        <div class="empty-state">
+            <div class="empty-icon">◆</div>
+            <div class="empty-title">Your article will appear here</div>
+            <div class="empty-sub">Enter a topic on the left and click Generate to get started.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════
+# GENERATION PIPELINE
+# ══════════════════════════════════════════════════════════════════
 if generate and topic.strip():
     for key in ["final_blog", "plan"]:
         st.session_state.pop(key, None)
@@ -409,100 +314,119 @@ if generate and topic.strip():
     total_sections = 0
     sections_done = 0
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    def render_pipeline(plan=None, sections_done=0, total=0, done=False):
+        lines = []
+        # Step 1 — Orchestrator
+        if plan:
+            lines.append('<div class="step-item"><div class="step-dot-done"></div><span class="step-text-done">Outline ready</span></div>')
+        else:
+            lines.append('<div class="step-item"><div class="step-dot-active"></div><span class="step-text-active">Planning structure…</span></div>')
 
-    with st.status("Running Quill pipeline…", expanded=True) as status:
-        progress = st.progress(0.0, text="Orchestrator is planning…")
+        # Step 2 — Workers
+        if plan and not done:
+            lines.append(
+                f'<div class="step-item"><div class="step-dot-active"></div>'
+                f'<span class="step-text-active">Writing sections&nbsp; {sections_done} / {total}</span></div>'
+            )
+        elif done:
+            lines.append(f'<div class="step-item"><div class="step-dot-done"></div><span class="step-text-done">Sections written ({total})</span></div>')
+        else:
+            lines.append('<div class="step-item"><div class="step-dot-pending"></div><span class="step-text-muted">Write sections</span></div>')
 
-        for event in app.stream({"topic": topic.strip()}, stream_mode="updates"):
-            for node, output in event.items():
+        # Step 3 — Reducer
+        if done:
+            lines.append('<div class="step-item"><div class="step-dot-done"></div><span class="step-text-done">Article assembled</span></div>')
+        else:
+            lines.append('<div class="step-item"><div class="step-dot-pending"></div><span class="step-text-muted">Assemble article</span></div>')
 
-                if node == "orchestrator":
-                    plan = output["plan"]
-                    total_sections = len(plan.tasks)
-                    st.session_state.plan = plan
+        pipeline_area.markdown("".join(lines), unsafe_allow_html=True)
 
-                    st.markdown(
-                        f"<p style='margin:0 0 8px;font-size:0.88rem;'>"
-                        f"<strong>Outline locked</strong> · "
-                        f"<em style='color:#6B7280'>{plan.blog_title}</em>"
-                        f"</p>",
-                        unsafe_allow_html=True,
-                    )
-                    with st.expander(f"{total_sections} sections planned — view outline"):
-                        for t in plan.tasks:
-                            brief = t.brief[:95] + ("…" if len(t.brief) > 95 else "")
-                            st.markdown(
-                                f"<div class='section-row'>"
-                                f"<div class='section-num'>{t.id:02d}</div>"
-                                f"<div>"
-                                f"<div class='section-title'>{t.title}</div>"
-                                f"<div class='section-brief'>{brief}</div>"
-                                f"</div></div>",
-                                unsafe_allow_html=True,
-                            )
-                    progress.progress(0.1, text=f"Dispatching workers…  0 / {total_sections}")
+    render_pipeline()
 
-                elif node == "worker":
-                    sections_done += 1
-                    frac = 0.1 + 0.85 * (sections_done / max(total_sections, 1))
-                    progress.progress(
-                        frac,
-                        text=f"Writing sections…  {sections_done} / {total_sections}",
-                    )
-                    st.markdown(
-                        f"<p style='margin:2px 0;font-size:0.84rem;color:#374151;'>"
-                        f"<span style='color:#16A34A;font-weight:700;'>✓</span>&nbsp;"
-                        f"Section {sections_done} of {total_sections} complete</p>",
-                        unsafe_allow_html=True,
-                    )
+    for event in app.stream({"topic": topic.strip()}, stream_mode="updates"):
+        for node, output in event.items():
 
-                elif node == "reducer":
-                    st.session_state.final_blog = output["final"]
-                    st.session_state.blog_title = plan.blog_title if plan else "article"
-                    progress.progress(1.0, text="Assembly complete")
+            if node == "orchestrator":
+                plan = output["plan"]
+                total_sections = len(plan.tasks)
+                st.session_state.plan = plan
 
-        status.update(label="Article ready", state="complete", expanded=False)
+                render_pipeline(plan=plan, sections_done=0, total=total_sections)
 
-# ── Output ─────────────────────────────────────────────────────────────────────
+                # Render outline in left panel
+                rows = "".join(
+                    f'<div class="outline-row">'
+                    f'<div class="outline-num">{t.id:02d}</div>'
+                    f'<div>'
+                    f'<div class="outline-title">{t.title}</div>'
+                    f'<div class="outline-brief">{t.brief[:70]}{"…" if len(t.brief) > 70 else ""}</div>'
+                    f'</div></div>'
+                    for t in plan.tasks
+                )
+                outline_area.markdown(
+                    f'<div style="margin-top:0.25rem;font-size:0.72rem;font-weight:600;'
+                    f'color:#9CA3AF;text-transform:uppercase;letter-spacing:0.07em;'
+                    f'margin-bottom:0.6rem;">Outline</div>{rows}',
+                    unsafe_allow_html=True,
+                )
+
+                # Clear right panel empty state
+                output_area.empty()
+
+            elif node == "worker":
+                sections_done += 1
+                render_pipeline(plan=plan, sections_done=sections_done, total=total_sections)
+
+            elif node == "reducer":
+                st.session_state.final_blog = output["final"]
+                st.session_state.blog_title = plan.blog_title if plan else "article"
+                render_pipeline(plan=plan, sections_done=total_sections, total=total_sections, done=True)
+
+                # Metrics in left panel
+                blog = output["final"]
+                metrics_area.markdown(
+                    f'<div style="margin-top:1rem;">'
+                    f'<hr style="margin:1rem 0!important;">'
+                    f'<div style="display:flex;gap:0.75rem;">'
+                    f'<div style="flex:1;background:#FAFAFA;border:1px solid #F3F4F6;border-radius:10px;padding:0.7rem 0.85rem;">'
+                    f'<div style="font-size:0.65rem;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.05em;">Words</div>'
+                    f'<div style="font-size:1.2rem;font-weight:700;color:#111827;letter-spacing:-0.02em;">{len(blog.split()):,}</div>'
+                    f'</div>'
+                    f'<div style="flex:1;background:#FAFAFA;border:1px solid #F3F4F6;border-radius:10px;padding:0.7rem 0.85rem;">'
+                    f'<div style="font-size:0.65rem;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.05em;">Sections</div>'
+                    f'<div style="font-size:1.2rem;font-weight:700;color:#111827;letter-spacing:-0.02em;">{total_sections}</div>'
+                    f'</div>'
+                    f'</div></div>',
+                    unsafe_allow_html=True,
+                )
+
+# ── Render final blog in right panel ──────────────────────────────
 if "final_blog" in st.session_state:
     blog = st.session_state.final_blog
     safe_title = st.session_state.get("blog_title", "article").lower().replace(" ", "_")
-    plan = st.session_state.get("plan")
 
-    st.markdown("""
-    <div class="result-header">
-        <span class="result-badge">✓ &nbsp;Complete</span>
-        <span class="result-title">Your article is ready</span>
-    </div>
-    """, unsafe_allow_html=True)
+    with right:
+        # Header row
+        dl_col, badge_col = st.columns([3, 2])
+        with badge_col:
+            st.markdown(
+                '<div style="display:flex;justify-content:flex-end;padding-top:2px;">'
+                '<span class="result-badge">✓ &nbsp;Complete</span></div>',
+                unsafe_allow_html=True,
+            )
+        with dl_col:
+            st.download_button(
+                "⬇  Download .md",
+                data=blog,
+                file_name=f"{safe_title}.md",
+                mime="text/markdown",
+            )
 
-    # Stats
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.metric("Words", f"{len(blog.split()):,}")
-    with c2:
-        st.metric("Sections", len(plan.tasks) if plan else "—")
-    with c3:
-        st.metric("Characters", f"{len(blog):,}")
+        st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    dl_col, _, __ = st.columns([2, 2, 3])
-    with dl_col:
-        st.download_button(
-            "⬇  Download .md",
-            data=blog,
-            file_name=f"{safe_title}.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    tab_preview, tab_raw = st.tabs(["Preview", "Markdown"])
-    with tab_preview:
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown(blog)
-    with tab_raw:
-        st.code(blog, language="markdown", line_numbers=True)
+        tab_preview, tab_raw = st.tabs(["Preview", "Markdown"])
+        with tab_preview:
+            st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+            st.markdown(blog)
+        with tab_raw:
+            st.code(blog, language="markdown", line_numbers=True)

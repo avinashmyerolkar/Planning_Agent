@@ -1,38 +1,212 @@
-# Planning_Agent
+# ◆ Quill — AI Content Engine
 
+> Multi-agent pipeline that plans, writes, and assembles long-form technical articles — powered by LangGraph and OpenAI.
 
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-latest-1C3C3C?style=flat)
+![Streamlit](https://img.shields.io/badge/Streamlit-latest-FF4B4B?style=flat&logo=streamlit&logoColor=white)
+![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4.1-412991?style=flat&logo=openai&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-22C55E?style=flat)
 
+---
 
-{
-  "blog_title": "How Attention Works in Transformers",
-  "tasks": [
-    {
-      "id": 1,
-      "title": "Introduction to Transformers and Attention",
-      "brief": "Explain the basics of transformer models and why attention mechanisms are crucial for their success."
-    },
-    {
-      "id": 2,
-      "title": "The Concept of Attention in Machine Learning",
-      "brief": "Introduce attention as a concept, detailing how it enables models to focus on relevant parts of input data."
-    },
-    {
-      "id": 3,
-      "title": "Conclusion and Future Directions",
-      "brief": "Summarize key points and highlight ongoing research trends related to attention in transformers."
-    }
-  ]
+## Overview
+
+Quill is a **multi-agent content generation system** built on [LangGraph](https://github.com/langchain-ai/langgraph). Given a topic, it:
+
+1. **Plans** a structured blog outline using an orchestrator agent
+2. **Writes** each section in parallel using independent worker agents
+3. **Assembles** the sections into a final polished article via a reducer
+
+The result is a production-ready Markdown article saved to disk and rendered in a clean Streamlit UI.
+
+---
+
+## Architecture
+
+```
+                    ┌─────────────────────────────┐
+                    │         User Input           │
+                    │  "How Self-Attention Works"  │
+                    └──────────────┬──────────────┘
+                                   │
+                                   ▼
+                         ┌─────────────────┐
+                         │  Orchestrator   │  Plans 5–7 sections
+                         │   (LLM + Plan   │  with title & brief
+                         │    schema)      │
+                         └────────┬────────┘
+                                  │  Fan-out via Send()
+                    ┌─────────────┼─────────────┐
+                    ▼             ▼             ▼
+             ┌──────────┐ ┌──────────┐ ┌──────────┐
+             │ Worker 1 │ │ Worker 2 │ │ Worker N │   Parallel
+             │ Section  │ │ Section  │ │ Section  │   execution
+             └────┬─────┘ └────┬─────┘ └────┬─────┘
+                  └────────────┼─────────────┘
+                               │  Fan-in (operator.add)
+                               ▼
+                        ┌─────────────┐
+                        │   Reducer   │  Sorts, joins, saves .md
+                        └──────┬──────┘
+                               │
+                               ▼
+                       ┌──────────────┐
+                       │  Final Blog  │
+                       │  (Markdown)  │
+                       └──────────────┘
+```
+
+---
+
+## Features
+
+- **Parallel section writing** — workers run concurrently via LangGraph's `Send` API, reducing total generation time
+- **Structured output** — orchestrator uses Pydantic schemas to guarantee consistent plan format
+- **Prompt management** — all prompts externalized to versioned YAML files under `prompts/`
+- **Auto-save** — generated articles saved to `outputs/` as Markdown files
+- **Streamlit UI** — side-by-side panel layout with live pipeline status, outline viewer, and download
+
+---
+
+## Project Structure
+
+```
+quill/
+├── agents/
+│   ├── orchestrator.py     # Plans the blog structure
+│   ├── worker.py           # Writes a single section
+│   └── reducer.py          # Assembles the final article
+│
+├── graphs/
+│   └── blog_graph.py       # LangGraph graph definition
+│
+├── schemas/
+│   ├── task_obj_schema.py  # Task (section) Pydantic model
+│   └── plan_obj_schema.py  # Plan Pydantic model
+│
+├── state/
+│   └── state.py            # LangGraph shared state (TypedDict)
+│
+├── prompts/
+│   ├── orchestrator.yaml   # Orchestrator system + human prompt
+│   └── worker.yaml         # Worker system + human prompt
+│
+├── config/
+│   ├── settings.py         # Pydantic settings (reads .env)
+│   └── llm.py              # LLM factory (ChatOpenAI wrapper)
+│
+├── utils/
+│   ├── prompt_loader.py    # YAML prompt loader
+│   └── file_io.py          # Markdown file writer
+│
+├── notebooks/
+│   └── 1_basic_blog_write.ipynb  # Prototype / reference notebook
+│
+├── frontend.py             # Streamlit UI
+├── backend_app.py          # CLI entry point
+├── requirement.txt         # Python dependencies
+└── .env                    # API keys (not committed)
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.11+
+- An [OpenAI API key](https://platform.openai.com/api-keys)
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/avinashmyerolkar/Planning_Agent.git
+cd Planning_Agent
+
+# 2. Create and activate a virtual environment
+python -m venv venv
+source venv/bin/activate        # macOS / Linux
+# venv\Scripts\activate         # Windows
+
+# 3. Install dependencies
+pip install -r requirement.txt
+```
+
+### Configuration
+
+Create a `.env` file in the project root:
+
+```env
+OPENAI_API_KEY=sk-...
+```
+
+### Run the app
+
+```bash
+streamlit run frontend.py
+```
+
+Open [http://localhost:8501](http://localhost:8501) in your browser.
+
+### Run from CLI
+
+```bash
+python backend_app.py
+```
+
+Generated articles are saved to `outputs/`.
+
+---
+
+## How It Works
+
+### 1. Orchestrator
+Calls the LLM with a structured output schema (`Plan`) to produce a list of `Task` objects — each with an `id`, `title`, and `brief` describing what the section should cover.
+
+### 2. Fan-out (parallel workers)
+LangGraph's `Send` API dispatches one `worker` node per task simultaneously. Each worker calls the LLM independently to write its section in Markdown.
+
+### 3. Reducer
+After all workers complete, the reducer joins the sections in order, prepends the blog title as an H1, and writes the result to `outputs/`.
+
+### State flow
+
+```python
+State = {
+    "topic":    str,                            # user input
+    "plan":     Plan,                           # orchestrator output
+    "sections": Annotated[List[str], add],      # accumulated by workers
+    "final":    str,                            # reducer output
 }
+```
 
+---
 
-worker fanout and responde with below (for only 3 section among above)
+## Tech Stack
 
-{'sections': ['## Introduction to Transformers and Attention\n\nTransformer models have revolutionized the field of natural language processing (NLP) by enabling machines to understand and generate human language with remarkable accuracy. Unlike previous models that processed data sequentially, transformers use a unique architecture that allows them to handle entire sequences of data simultaneously. This breakthrough is largely due to the **attention mechanism**, which helps the model focus on the most relevant parts of the input when making predictions.\n\nAt its core, attention allows the transformer to weigh the importance of different words or tokens relative to each other within a sentence or sequence. By doing so, the model can capture complex dependencies and contextual relationships, regardless of how far apart words appear in the input. This capability is essential for tasks like translation, summarization, and question answering, where understanding context deeply influences the output quality.\n\nIn summary, attention mechanisms are the cornerstone of transformer models, empowering them to process and generate language more effectively than ever before.']}
+| Layer | Technology |
+|---|---|
+| Agent orchestration | [LangGraph](https://github.com/langchain-ai/langgraph) |
+| LLM | OpenAI GPT-4.1-mini (via [LangChain](https://github.com/langchain-ai/langchain)) |
+| Data validation | [Pydantic v2](https://docs.pydantic.dev/) |
+| Configuration | [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) |
+| UI | [Streamlit](https://streamlit.io/) |
+| Language | Python 3.11+ |
 
-{'sections': ["## The Concept of Attention in Machine Learning\n\nAttention is a powerful mechanism in machine learning that allows models to dynamically focus on the most relevant parts of input data when making predictions. Rather than processing all information equally, attention helps a model weigh different elements based on their importance to the task at hand. This selective focus enhances the model's ability to understand context, capture dependencies, and improve performance, especially in tasks involving sequences such as language, audio, or time series data. By assigning varying levels of attention to different inputs, models can effectively prioritize crucial information, leading to more accurate and context-aware results."]}
+---
 
-{'sections': ['## Conclusion and Future Directions\n\nIn summary, attention mechanisms are at the heart of Transformer architectures, enabling models to dynamically weigh the importance of different input elements. By capturing contextual relationships through self-attention, Transformers excel in various tasks such as natural language processing, computer vision, and more. Key components like multi-head attention and positional encoding work synergistically to provide rich, nuanced representations of data.\n\nLooking ahead, ongoing research continues to explore more efficient and scalable attention variants to address the growing complexity and size of modern models. Innovations such as sparse attention, linear attention, and adaptive attention methods aim to reduce computational overhead while maintaining performance. Additionally, cross-modal attention mechanisms are expanding the applicability of Transformers to multi-sensory and multimodal tasks. As the understanding of attention deepens, future Transformers are poised to become even more powerful and versatile across diverse domains.']}
-    
+## Roadmap
 
-# Tools result : { "title": "...", "url": "...", "content": "...", "score": 0.87 }
-[{'title': 'ChatGPT — Release Notes - OpenAI Help Center', 'url': 'https://help.openai.com/en/articles/6825453-chatgpt-release-notes', 'content': 'February 4, 2026\n   Update on thinking time settings for GPT-5.2 Thinking in ChatGPT\n   February 2, 2026\n   Introducing the Codex app\n   January 30, 2026\n   More visual responses\n   January 29, 2026\n   Retiring GPT-4o and other legacy models\n   January 26, 2026\n   Improvements to search response quality in Voice\n   January 22, 2026\n   5.2 Personality System Prompt Update\n   January 20, 2026\n   Voice Updates\n   Rolling out age prediction\n   January 15, 2026\n   Improved memory for finding details from past chats (Plus & Pro)\n   January 12, 2026\n   Dictation Updates\n   January 7, 2026\n   Health in ChatGPT\n   December 22, 2025\n   Your Year with ChatGPT\n   December 19, 2025\n   New detailed characteristic controls\n   December 18, 2025\n   Introducing the app directory in ChatGPT [...] January 29, 2026\n\nRetiring GPT-4o and other legacy models\n\nOn February 13, 2026, alongside the previously announced retirement\u2060 of GPT‑5 (Instant and Thinking), we will retire GPT‑4o, GPT‑4.1, GPT‑4.1 mini, and OpenAI o4-mini from ChatGPT. In the API, there are no changes at this time. For more, see our blog post or help center.\n\nJanuary 26, 2026\n\nImprovements to search response quality in Voice\n\nWe’ve improved search responses in ChatGPT Voice to deliver more complete, up-to-date answers, including better access to shopping results.\n\nJanuary 22, 2026\n\n5.2 Personality System Prompt Update [...] ChatGPT — Release Notes | OpenAI Help Center\n\nImage 1: OpenAI\n\nLanguage English United States\n\nLogin\n\n1.   All Collections\n2.   ChatGPT\n3.   ChatGPT — Release Notes\n\nChatGPT — Release Notes\n\nA changelog of the latest updates and release notes for ChatGPT\n\nUpdated: 2 days ago\n\nFebruary 4, 2026\n\nUpdate on thinking time settings for GPT-5.2 Thinking in ChatGPT\n\nJan 10, 2026: We lowered the Standard and Light thinking time as we observed users prefer faster responses. As part of this update, the Extended thinking setting for GPT-5.2 was unintentionally changed to be lower which we have now fixed.\n\nFebruary 3, 2026:We made another small reduction to Standard thinking time based on testing.', 'score': 0.87166095}, {'title': 'Deprecations | OpenAI API', 'url': 'https://platform.openai.com/docs/deprecations', 'content': '### 2023-06-13: Updated chat models\n\nOn June 13, 2023, we announced new chat model versions in the Function calling and other API updates blog post. The three original versions will be retired in June 2024 at the earliest. As of January 10, 2024, only existing users of these models will be able to continue using them.\n\n| Shutdown date | Legacy model | Legacy model price | Recommended replacement |\n ---  --- |\n| at earliest 2024-06-13 | `gpt-4-0314` | $30.00 / 1M input tokens + $60.00 / 1M output tokens | `gpt-4o` | [...] We use the term "legacy" to refer to models and endpoints that no longer receive updates. We tag endpoints and models as legacy to signal to developers where we\'re moving as a platform and that they should likely migrate to newer models or endpoints. You can expect that a legacy model or endpoint will be deprecated at some point in the future.\n\n## Deprecation history\n\nAll deprecations are listed below, with the most recent announcements at the top.\n\n### 2025-11-18: chatgpt-4o-latest snapshot\n\nOn November 18th, 2025, we notified developers using `chatgpt-4o-latest` model snapshot of its deprecation and removal from the API on February 17, 2026.\n\n| Shutdown date | Model / system | Recommended replacement |\n --- \n| 2026-02-17 | `chatgpt-4o-latest` | `gpt-5.1-chat-latest` | [...] ### 2023-11-06: Chat model updates\n\nOn November 6th, 2023, we announced the release of an updated GPT-3.5-Turbo model (which now comes by default with 16k context) along with deprecation of `gpt-3.5-turbo-0613` and  `gpt-3.5-turbo-16k-0613`. As of June 17, 2024, only existing users of these models will be able to continue using them.\n\n| Shutdown date | Deprecated model | Deprecated model price | Recommended replacement |\n ---  --- |\n| 2024-09-13 | `gpt-3.5-turbo-0613` | $1.50 / 1M input tokens + $2.00 / 1M output tokens | `gpt-3.5-turbo` |\n| 2024-09-13 | `gpt-3.5-turbo-16k-0613` | $3.00 / 1M input tokens + $4.00 / 1M output tokens | `gpt-3.5-turbo` |', 'score': 0.6768127}]
+- [ ] Router agent — decides if web research is needed before planning
+- [ ] Research agent — Tavily-powered web search for volatile topics
+- [ ] Streaming token output in the UI
+- [ ] Multiple export formats (HTML, PDF)
+- [ ] Custom tone / audience / length controls
+
+---
+
+## License
+
+MIT © 2026 Avinash Mahadev Yerolkar
