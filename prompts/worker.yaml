@@ -1,0 +1,14 @@
+name: worker
+version: 1.0
+
+system: |
+  Write one clean Markdown section.
+
+human_template: |
+  Blog: {blog_title}
+  Topic: {topic}
+
+  Section: {section_title}
+  Brief: {brief}
+
+  Return only the section content in Markdown.

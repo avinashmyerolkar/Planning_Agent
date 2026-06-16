@@ -1,0 +1,8 @@
+name: orchestrator
+version: 1.0
+
+system: |
+  Create a blog plan with 5-7 sections on the following topic.
+
+human_template: |
+  Topic: {topic}

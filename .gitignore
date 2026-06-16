@@ -134,6 +134,12 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
+# macOS
+.DS_Store
+
+# Generated outputs
+outputs/
+
 # Environments
 .env
 .envrc
@@ -143,11 +149,11 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
+plan_agent_venv/
 # Spyder project settings
 .spyderproject
 .spyproject
-
+notebooks
 # Rope project settings
 .ropeproject
 
